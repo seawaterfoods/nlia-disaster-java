@@ -69,3 +69,40 @@
 - 全面改用環境變數注入 (${ENV_VAR})
 - 清理 Git 歷史中的敏感資訊
 - 新增 .env.example 範本
+
+### 品質改進與文件增強
+- **Swagger/OpenAPI**：springdoc-openapi 整合，11 個 Controller 62 個 endpoint 全部加上 @Tag + @Operation 註解
+- **Mermaid 圖表**：新增 docs/diagrams.md 包含 10 張圖表
+  - 系統架構圖 (C4 風格)
+  - 套件模組結構圖
+  - ER 圖 (16 entities)
+  - 登入序列圖
+  - 災損通報序列圖
+  - 通知告警流程圖
+  - nd 狀態推導流程圖
+  - JWT 認證流程圖
+  - Docker 部署架構圖
+  - 報表主檔狀態機
+- **單元測試增強**：7 → 34 tests
+  - DisasterServiceTest：8 tests (CRUD + ID 產生規則)
+  - NdReportMainTest：13 tests (deriveNdStatus 參數化測試，對應 PHP check_nd())
+  - ReportServiceTest：6 tests (ensureMain, updateStatus, soft-delete)
+- **後端品質修正**：
+  - ReportController / AlertController：Map<String,Object> 改為 typed DTO + @Valid
+  - 新增 EnsureMainRequest, UpdateMainStatusRequest, SendAlertRequest DTO
+  - docker-compose.yml：加入 restart: unless-stopped
+  - application.yml：springdoc 配置
+
+### 前端全面改寫
+- **UI 框架**：導入 Ant Design + @ant-design/icons
+- **MainLayout**：Ant Design Layout/Sider/Menu（可收合深色側邊欄 + Header Dropdown）
+- **LoginPage**：Ant Design Form/Card + Email 失敗通知
+- **DashboardPage**：災害統計卡片 + 進行中災害列表
+- **DisasterPage**：CRUD Table + Modal 表單 + DatePicker
+- **ReportPage**：兩層鑽取 (災害→公司通報主檔→明細 CRUD)
+- **AccountPage**：搜尋/分頁 Table + Drawer 表單 + 密碼變更 Modal
+- **StatisticsPage**：災害選擇器 + 4 頁籤統計表
+- **SystemConfigPage**：4 頁籤 (系統設定/商品/原因碼/郵遞區號)
+- **SyslogPage**：篩選條件 + 分頁 Log 表格
+- **API 模組**：6 個 API 模組 (disasters, reports, accounts, statistics, syslogs, config)
+- **TypeScript 型別**：15+ interfaces 對應後端 Entity
