@@ -2,6 +2,7 @@ services:
   db:
     image: mysql:8.0
     container_name: nlia-disaster-db
+    restart: unless-stopped
     environment:
       MYSQL_DATABASE: nlia_disaster
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
@@ -20,6 +21,7 @@ services:
   backend:
     build: ./backend
     container_name: nlia-disaster-backend
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -32,12 +34,14 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ALERT_RECIPIENTS: ${MAIL_ALERT_RECIPIENTS:-}
     ports:
       - "8080:8080"
 
   frontend:
     build: ./frontend
     container_name: nlia-disaster-frontend
+    restart: unless-stopped
     depends_on:
       - backend
     ports:

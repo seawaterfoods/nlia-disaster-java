@@ -21,3 +21,8 @@ mail:
   from:
     address: test@nlia.org.tw
     name: Test
+  alert:
+    recipients: ""
+  retry:
+    max-attempts: 1
+    delay-ms: 0

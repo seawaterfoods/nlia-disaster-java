@@ -15,13 +15,18 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Tag(name = "Excel 匯出入", description = "Excel 匯出與匯入")
 public class ExcelController {
 
     private final ExcelService excelService;
 
+    @Operation(summary = "匯出通報明細", description = "匯出指定災害事件與公司的通報明細 Excel")
     @GetMapping("/export/reports/{ndsn}/{cid}")
     public ResponseEntity<byte[]> exportReports(@PathVariable Long ndsn, @PathVariable String cid)
             throws IOException {
@@ -34,6 +39,7 @@ public class ExcelController {
                 .body(data);
     }
 
+    @Operation(summary = "匯入通報明細", description = "匯入通報明細 Excel 檔案")
     @PostMapping("/import/reports")
     public ApiResponse<Integer> importReports(@RequestParam Long ndsn,
                                                @RequestParam String cid,

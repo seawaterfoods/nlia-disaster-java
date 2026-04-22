@@ -11,13 +11,18 @@ import tw.org.nlia.disaster.config.JwtUserDetails;
 import tw.org.nlia.disaster.entity.Syslog;
 import tw.org.nlia.disaster.syslog.service.SyslogService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/syslogs")
 @RequiredArgsConstructor
+@Tag(name = "系統日誌", description = "操作日誌查詢")
 public class SyslogController {
 
     private final SyslogService syslogService;
 
+    @Operation(summary = "查詢系統日誌", description = "依條件分頁查詢操作日誌")
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_LEVEL_3','ROLE_LEVEL_4')")
     public ApiResponse<Page<Syslog>> list(
