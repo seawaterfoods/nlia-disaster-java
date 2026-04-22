@@ -53,6 +53,11 @@ mail:
   from:
     address: ${MAIL_FROM:noreply@example.com}
     name: 中華民國產物保險產業同業公會重大災損通報系統
+  alert:
+    recipients: ${MAIL_ALERT_RECIPIENTS:}
+  retry:
+    max-attempts: 3
+    delay-ms: 2000
 
 logging:
   level:

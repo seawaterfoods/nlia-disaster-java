@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tw.org.nlia.disaster.account.repository.CompanyLoginRepository;
 import tw.org.nlia.disaster.account.repository.CompanyRepository;
+import tw.org.nlia.disaster.alert.repository.EmailFailureLogRepository;
 import tw.org.nlia.disaster.alert.repository.NdAlertRepository;
 import tw.org.nlia.disaster.disaster.repository.DisasterRepository;
 import tw.org.nlia.disaster.entity.*;
@@ -31,6 +32,7 @@ public class AlertService {
     private final CompanyRepository companyRepository;
     private final NdReportDetailRepository reportDetailRepository;
     private final SysConfigRepository sysConfigRepository;
+    private final EmailFailureLogRepository emailFailureLogRepository;
     private final JavaMailSender mailSender;
 
     @Value("${mail.from.address:noreply@example.com}")
@@ -39,11 +41,20 @@ public class AlertService {
     @Value("${mail.from.name:重大災損通報系統}")
     private String fromName;
 
+    @Value("${mail.retry.max-attempts:3}")
+    private int maxRetryAttempts;
+
+    @Value("${mail.retry.delay-ms:2000}")
+    private long retryDelayMs;
+
+    @Value("${mail.alert.recipients:}")
+    private String configAlertRecipients;
+
     /**
      * Send disaster notification to member companies (matches PHP nd_alert)
      */
     @Transactional
-    public void sendDisasterAlert(Long ndsn, String insuranceTypes) {
+    public void sendDisasterAlert(Long ndsn, String insuranceTypes, Long triggeredBySn) {
         Disaster disaster = disasterRepository.findById(ndsn).orElse(null);
         if (disaster == null) return;
 
@@ -56,22 +67,18 @@ public class AlertService {
                     email = recipient.getEmail2();
                 }
                 if (email != null && !email.isEmpty()) {
-                    try {
-                        String subject = "重大災損通報：" + disaster.getTitle();
-                        String body = buildAlertEmailBody(disaster);
-                        sendEmail(email, subject, body);
+                    String subject = "重大災損通報：" + disaster.getTitle();
+                    String body = buildAlertEmailBody(disaster);
+                    sendEmailWithRetry(email, subject, body, triggeredBySn);
 
-                        NdAlert alert = NdAlert.builder()
-                                .ndsn(ndsn)
-                                .adminsn(recipient.getSn())
-                                .email(email)
-                                .content(subject)
-                                .adate(LocalDateTime.now())
-                                .build();
-                        ndAlertRepository.save(alert);
-                    } catch (Exception e) {
-                        log.error("Failed to send alert to {}: {}", email, e.getMessage());
-                    }
+                    NdAlert alert = NdAlert.builder()
+                            .ndsn(ndsn)
+                            .adminsn(recipient.getSn())
+                            .email(email)
+                            .content(subject)
+                            .adate(LocalDateTime.now())
+                            .build();
+                    ndAlertRepository.save(alert);
                 }
             }
         }
@@ -79,16 +86,15 @@ public class AlertService {
 
     /**
      * Check amount threshold alert (matches PHP nd_alert3)
-     * If total preCost exceeds threshold, send alert to designated recipients
      */
     @Transactional
-    public void checkAmountAlert(Long ndsn, String cid, BigDecimal newAmount) {
+    public void checkAmountAlert(Long ndsn, String cid, BigDecimal newAmount, Long triggeredBySn) {
         if (newAmount == null) return;
 
         var configOpt = sysConfigRepository.findByConfigId("claim_alert_threshold");
         BigDecimal threshold = configOpt
                 .map(c -> new BigDecimal(c.getContent()))
-                .orElse(new BigDecimal("10000000")); // Default 10M
+                .orElse(new BigDecimal("10000000"));
 
         BigDecimal totalAmount = reportDetailRepository.sumPreCostByNdsnAndCid(ndsn, cid);
         if (totalAmount == null) totalAmount = BigDecimal.ZERO;
@@ -98,12 +104,12 @@ public class AlertService {
                     .map(Company::getCname).orElse(cid);
             Disaster disaster = disasterRepository.findById(ndsn).orElse(null);
 
-            // Get alert recipients from config
-            var recipientConfig = sysConfigRepository.findByConfigId("claim_alert_emails");
-            String recipientEmails = recipientConfig.map(SysConfig::getContent)
-                    .orElse("");
+            // Get alert recipients: sys_config → yml config → empty
+            String recipientEmails = sysConfigRepository.findByConfigId("claim_alert_emails")
+                    .map(SysConfig::getContent)
+                    .orElse(configAlertRecipients);
 
-            if (!recipientEmails.isEmpty() && disaster != null) {
+            if (recipientEmails != null && !recipientEmails.isEmpty() && disaster != null) {
                 String subject = String.format("【金額告警】%s - %s 通報金額已達 %s",
                         disaster.getTitle(), companyName, totalAmount.toPlainString());
                 String body = String.format(
@@ -112,11 +118,7 @@ public class AlertService {
                         totalAmount.toPlainString(), threshold.toPlainString());
 
                 for (String email : recipientEmails.split(",")) {
-                    try {
-                        sendEmail(email.trim(), subject, body);
-                    } catch (Exception e) {
-                        log.error("Failed to send amount alert to {}: {}", email, e.getMessage());
-                    }
+                    sendEmailWithRetry(email.trim(), subject, body, triggeredBySn);
                 }
             }
         }
@@ -124,6 +126,19 @@ public class AlertService {
 
     public List<NdAlert> findByDisaster(Long ndsn) {
         return ndAlertRepository.findByNdsnOrderByAdateDesc(ndsn);
+    }
+
+    public List<EmailFailureLog> findUnresolvedFailures(Long userSn) {
+        return emailFailureLogRepository.findUnresolvedByUser(userSn);
+    }
+
+    public List<EmailFailureLog> findAllUnresolvedFailures() {
+        return emailFailureLogRepository.findAllUnresolved();
+    }
+
+    @Transactional
+    public void resolveFailure(Long sn) {
+        emailFailureLogRepository.markResolved(sn);
     }
 
     private String buildAlertEmailBody(Disaster disaster) {
@@ -138,19 +153,49 @@ public class AlertService {
                 disaster.getContent() != null ? disaster.getContent() : "");
     }
 
-    private void sendEmail(String to, String subject, String htmlBody) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromAddress, fromName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
-            mailSender.send(message);
-            log.info("Email sent to {}: {}", to, subject);
-        } catch (Exception e) {
-            log.error("Failed to send email to {}: {}", to, e.getMessage());
-            throw new RuntimeException("發信失敗", e);
+    /**
+     * Send email with retry mechanism (max 3 attempts by default).
+     * On exhaustion, creates EmailFailureLog record for login notification.
+     */
+    private void sendEmailWithRetry(String to, String subject, String htmlBody, Long triggeredBySn) {
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= maxRetryAttempts; attempt++) {
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(fromAddress, fromName);
+                helper.setTo(to);
+                helper.setSubject(subject);
+                helper.setText(htmlBody, true);
+                mailSender.send(message);
+                log.info("Email sent to {} (attempt {}): {}", to, attempt, subject);
+                return;
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("Email send attempt {}/{} failed for {}: {}", attempt, maxRetryAttempts, to, e.getMessage());
+                if (attempt < maxRetryAttempts) {
+                    try { Thread.sleep(retryDelayMs); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
         }
+
+        // All retries exhausted — log failure
+        log.error("Email send FAILED after {} attempts to {}: {}", maxRetryAttempts, to,
+                lastException != null ? lastException.getMessage() : "unknown");
+
+        EmailFailureLog failureLog = EmailFailureLog.builder()
+                .recipient(to)
+                .subject(subject)
+                .errorMessage(lastException != null ? lastException.getMessage() : "Unknown error")
+                .retryCount(maxRetryAttempts)
+                .resolved("N")
+                .triggeredBySn(triggeredBySn)
+                .adate(LocalDateTime.now())
+                .build();
+        emailFailureLogRepository.save(failureLog);
     }
 }

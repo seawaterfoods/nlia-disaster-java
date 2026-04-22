@@ -11,6 +11,8 @@ public class ReportMainResponse {
     private Long ndsn;
     private String cid;
     private String companyName;
+    /** 通報彙總狀態 */
+    private String nd;
     private String nd1;
     private String nd2;
     private String nd3;

@@ -3,6 +3,7 @@ package tw.org.nlia.disaster.config;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -65,5 +66,12 @@ public class JwtTokenProvider {
 
     public Long getUserSnFromToken(String token) {
         return Long.parseLong(parseToken(token).getSubject());
+    }
+
+    public Long getUserSnFromAuthentication(Authentication auth) {
+        if (auth != null && auth.getCredentials() instanceof String token) {
+            return getUserSnFromToken(token);
+        }
+        return null;
     }
 }

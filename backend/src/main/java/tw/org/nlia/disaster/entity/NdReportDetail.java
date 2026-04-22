@@ -95,4 +95,8 @@ public class NdReportDetail {
 
     @Column(name = "del_date")
     private LocalDateTime delDate;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

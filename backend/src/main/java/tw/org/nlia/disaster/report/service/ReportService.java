@@ -46,14 +46,17 @@ public class ReportService {
         NdReportMain main = NdReportMain.builder()
                 .ndsn(ndsn)
                 .cid(cid)
+                .nd(Constants.STATUS_NOT_REPORTED)
                 .nd1(Constants.STATUS_NOT_REPORTED)
                 .nd2(Constants.STATUS_NOT_REPORTED)
                 .nd3(Constants.STATUS_NOT_REPORTED)
                 .nd4(Constants.STATUS_NOT_REPORTED)
                 .nd5(Constants.STATUS_NOT_REPORTED)
                 .closs(Constants.STATUS_NOT_REPORTED)
+                .lstatus(Constants.STATUS_NOT_REPORTED)
                 .author(author)
                 .adate(LocalDateTime.now())
+                .atime(System.currentTimeMillis() / 1000)
                 .build();
 
         return reportMainRepository.save(main);
@@ -84,7 +87,16 @@ public class ReportService {
             case "nd5" -> main.setNd5(status);
             case "closs" -> main.setCloss(status);
         }
+        // Re-derive nd summary from nd1~nd5 (matches PHP check_nd())
+        main.setNd(main.deriveNdStatus());
         main.setUdate(LocalDateTime.now());
+        main.setAtime(System.currentTimeMillis() / 1000);
+
+        // If all nd types report "no loss", soft-delete all details (matches PHP rpt_main_upd.php)
+        if ("N".equals(main.deriveNdStatus())) {
+            reportDetailRepository.softDeleteByNdsnAndCid(ndsn, cid);
+        }
+
         reportMainRepository.save(main);
         return toMainResponse(main);
     }
@@ -134,7 +146,7 @@ public class ReportService {
         reportDetailRepository.save(detail);
 
         // Check amount threshold alert (matches PHP nd_alert3)
-        alertService.checkAmountAlert(request.getNdsn(), request.getCid(), request.getPreCost());
+        alertService.checkAmountAlert(request.getNdsn(), request.getCid(), request.getPreCost(), adminsn);
 
         return toDetailResponse(detail);
     }
@@ -197,6 +209,7 @@ public class ReportService {
                 .ndsn(main.getNdsn())
                 .cid(main.getCid())
                 .companyName(companyName)
+                .nd(main.getNd())
                 .nd1(main.getNd1())
                 .nd2(main.getNd2())
                 .nd3(main.getNd3())

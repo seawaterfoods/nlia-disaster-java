@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tw.org.nlia.disaster.account.repository.CompanyLoginRepository;
 import tw.org.nlia.disaster.account.repository.CompanyRepository;
+import tw.org.nlia.disaster.alert.repository.EmailFailureLogRepository;
 import tw.org.nlia.disaster.auth.dto.LoginRequest;
 import tw.org.nlia.disaster.auth.dto.LoginResponse;
 import tw.org.nlia.disaster.common.BusinessException;
@@ -14,10 +15,12 @@ import tw.org.nlia.disaster.common.PasswordEncoderUtil;
 import tw.org.nlia.disaster.config.JwtTokenProvider;
 import tw.org.nlia.disaster.entity.Company;
 import tw.org.nlia.disaster.entity.CompanyLogin;
+import tw.org.nlia.disaster.entity.EmailFailureLog;
 import tw.org.nlia.disaster.entity.Syslog;
 import tw.org.nlia.disaster.syslog.repository.SyslogRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,7 @@ public class AuthService {
     private final SyslogRepository syslogRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoderUtil passwordEncoderUtil;
+    private final EmailFailureLogRepository emailFailureLogRepository;
 
     @Transactional
     public LoginResponse login(LoginRequest request, String remoteIp) {
@@ -67,6 +71,13 @@ public class AuthService {
                 user.getSn(), user.getEmail(), user.getAlevel(), user.getCid());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getSn());
 
+        // Check for unresolved email failure notifications
+        List<EmailFailureLog> failures = emailFailureLogRepository.findUnresolvedByUser(user.getSn());
+        List<String> notifications = failures.stream()
+                .map(f -> String.format("信件發送失敗（已重試 %d 次）：收件人 %s，主旨：%s，錯誤：%s",
+                        f.getRetryCount(), f.getRecipient(), f.getSubject(), f.getErrorMessage()))
+                .toList();
+
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -80,6 +91,7 @@ public class AuthService {
                         .level(user.getAlevel())
                         .insurance(user.getInsurance())
                         .build())
+                .emailFailureNotifications(notifications.isEmpty() ? null : notifications)
                 .build();
     }
 

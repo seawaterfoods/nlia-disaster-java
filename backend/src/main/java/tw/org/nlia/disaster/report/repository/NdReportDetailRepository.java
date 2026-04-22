@@ -3,6 +3,7 @@ package tw.org.nlia.disaster.report.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -42,4 +43,9 @@ public interface NdReportDetailRepository extends JpaRepository<NdReportDetail, 
     long countByNdsnAndClose(@Param("ndsn") Long ndsn, @Param("close") String close);
 
     boolean existsByNdsn(Long ndsn);
+
+    /** Soft-delete all details for a disaster+company (matches PHP behavior when nd='N') */
+    @Modifying
+    @Query("UPDATE NdReportDetail d SET d.showStatus = 'N', d.delDate = CURRENT_TIMESTAMP WHERE d.ndsn = :ndsn AND d.cid = :cid AND d.showStatus = 'Y'")
+    int softDeleteByNdsnAndCid(@Param("ndsn") Long ndsn, @Param("cid") String cid);
 }

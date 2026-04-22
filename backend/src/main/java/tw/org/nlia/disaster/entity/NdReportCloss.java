@@ -63,4 +63,8 @@ public class NdReportCloss {
 
     @Column(name = "show_status", length = 1)
     private String showStatus;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

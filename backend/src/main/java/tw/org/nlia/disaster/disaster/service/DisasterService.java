@@ -12,6 +12,8 @@ import tw.org.nlia.disaster.disaster.dto.DisasterResponse;
 import tw.org.nlia.disaster.disaster.repository.DisasterRepository;
 import tw.org.nlia.disaster.entity.Disaster;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,21 @@ import java.util.stream.Collectors;
 public class DisasterService {
 
     private final DisasterRepository disasterRepository;
+
+    /**
+     * Generate disaster ID: YYYYMMDD + 3-digit zero-padded sequence
+     * E.g., first disaster on 2024-01-15 → "20240115001"
+     */
+    private String generateDisasterId() {
+        String prefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String maxId = disasterRepository.findMaxIdByPrefix(prefix);
+
+        int nextSeq = 1;
+        if (maxId != null && maxId.length() > 8) {
+            nextSeq = Integer.parseInt(maxId.substring(8)) + 1;
+        }
+        return prefix + String.format("%03d", nextSeq);
+    }
 
     public List<DisasterResponse> findAll() {
         return disasterRepository.findAllByOrderBySnDesc().stream()
@@ -41,7 +58,10 @@ public class DisasterService {
 
     @Transactional
     public DisasterResponse create(DisasterRequest request, String authorCid, Long authorSn) {
+        String disasterId = generateDisasterId();
+
         Disaster disaster = Disaster.builder()
+                .id(disasterId)
                 .title(request.getTitle())
                 .content(request.getContent())
                 .ddate(request.getDdate())

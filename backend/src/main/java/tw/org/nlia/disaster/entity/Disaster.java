@@ -72,4 +72,8 @@ public class Disaster {
 
     @Column(name = "author_sn")
     private Long authorSn;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

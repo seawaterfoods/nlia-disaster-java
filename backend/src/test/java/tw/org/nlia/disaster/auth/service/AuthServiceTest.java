@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tw.org.nlia.disaster.account.repository.CompanyLoginRepository;
 import tw.org.nlia.disaster.account.repository.CompanyRepository;
+import tw.org.nlia.disaster.alert.repository.EmailFailureLogRepository;
 import tw.org.nlia.disaster.auth.dto.LoginRequest;
 import tw.org.nlia.disaster.auth.dto.LoginResponse;
 import tw.org.nlia.disaster.common.BusinessException;
@@ -17,6 +18,7 @@ import tw.org.nlia.disaster.entity.Company;
 import tw.org.nlia.disaster.entity.CompanyLogin;
 import tw.org.nlia.disaster.syslog.repository.SyslogRepository;
 
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,6 +33,7 @@ class AuthServiceTest {
     @Mock private SyslogRepository syslogRepository;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private PasswordEncoderUtil passwordEncoderUtil;
+    @Mock private EmailFailureLogRepository emailFailureLogRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -66,6 +69,7 @@ class AuthServiceTest {
         when(companyRepository.findById("01")).thenReturn(Optional.of(testCompany));
         when(jwtTokenProvider.generateAccessToken(1L, "test@example.com", 1, "01")).thenReturn("access-token");
         when(jwtTokenProvider.generateRefreshToken(1L)).thenReturn("refresh-token");
+        when(emailFailureLogRepository.findUnresolvedByUser(1L)).thenReturn(Collections.emptyList());
 
         LoginResponse response = authService.login(
                 new LoginRequest("test@example.com", "password123"), "127.0.0.1");
@@ -107,6 +111,7 @@ class AuthServiceTest {
         when(companyRepository.findById("01")).thenReturn(Optional.of(testCompany));
         when(jwtTokenProvider.generateAccessToken(anyLong(), anyString(), anyInt(), anyString())).thenReturn("token");
         when(jwtTokenProvider.generateRefreshToken(anyLong())).thenReturn("refresh");
+        when(emailFailureLogRepository.findUnresolvedByUser(1L)).thenReturn(Collections.emptyList());
 
         authService.login(new LoginRequest("test@example.com", "123456"), "127.0.0.1");
 

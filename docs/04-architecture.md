@@ -57,7 +57,7 @@ tw.org.nlia.disaster/
 │   ├── Constants.java               # 系統常數
 │   ├── JwtTokenProvider.java        # JWT 工具
 │   └── PasswordEncoderUtil.java     # BCrypt + MD5 相容
-├── entity/                          # 15 個 JPA Entity
+├── entity/                          # 16 個 JPA Entity (含 EmailFailureLog)
 ├── auth/
 │   ├── controller/AuthController.java
 │   ├── service/AuthService.java
@@ -116,6 +116,18 @@ tw.org.nlia.disaster/
 - Refresh Token：長效期（7 天）
 - 密碼：BCrypt 加密，向下相容 MD5（登入成功後自動升級）
 - 權限：基於 Level (1~5) 的角色控制
+
+## Email 失敗追蹤與重試機制
+
+- **EmailFailureLog Entity**：記錄發送失敗的 email（收件人、主旨、錯誤訊息、重試次數）
+- **重試機制**：最多 3 次重試，間隔 2 秒（可設定）
+- **登入通知**：使用者登入時，若有未解決的 Email 發送失敗紀錄，顯示通知
+- **告警收件人**：從 `application.yml` (`mail.alert.recipients`) 讀取，支援 `sys_config` 資料表 fallback
+
+## 併發控制
+
+- 核心 Entity (NdReportMain, NdReportDetail, NdReportCloss, Disaster) 使用 `@Version` 樂觀鎖
+- 併發衝突時回傳 HTTP 409 (Conflict)
 
 ## 統一回應格式
 

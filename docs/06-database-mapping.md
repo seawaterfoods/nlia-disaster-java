@@ -82,7 +82,7 @@ public class Disaster {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long sn;
     
-    private String id;            // 災害代碼 YYYYMMDD+序號
+    private String id;            // 災害代碼 YYYYMMDD + 3 碼零填充序號 (例：20240115001)，由 DisasterService.generateDisasterId() 產生
     private String title;
     
     @Column(columnDefinition = "TEXT")
@@ -122,6 +122,9 @@ public class Disaster {
     
     @Column(name = "author_sn")
     private Long authorSn;
+    
+    @Version
+    private Long version;     // 樂觀鎖
 }
 ```
 
@@ -142,10 +145,16 @@ public class NdReportMain {
     private String nd3;       // 水險
     private String nd4;       // 意外險
     private String nd5;       // 傷健險
+    private String nd;        // 彙總狀態 (由 deriveNdStatus() 從 nd1~nd5 衍生，對應 PHP check_nd())
     private String closs;     // 自有房舍
+    private String lstatus;   // 列印狀態
     private String author;
     private LocalDateTime adate;
     private LocalDateTime udate;
+    private Long atime;       // Unix timestamp
+    
+    @Version
+    private Long version;     // 樂觀鎖
 }
 ```
 
@@ -205,14 +214,17 @@ public class NdReportDetail {
     
     @Column(name = "del_date")
     private LocalDateTime delDate;
+    
+    @Version
+    private Long version;     // 樂觀鎖
 }
 ```
 
-### 6~15 其他 Entity (簡述)
+### 6~16 其他 Entity (簡述)
 
 | Entity | 主要欄位 | 備註 |
 |--------|---------|------|
-| NdReportCloss | sn, ndsn, cid, uname, zip, s1~s5, inum, dnum, memo | 自有房舍 |
+| NdReportCloss | sn, ndsn, cid, uname, zip, s1~s5, inum, dnum, memo, version (@Version) | 自有房舍 |
 | NdAlert | sn, ndsn, adminsn, email, adate | 通知紀錄 |
 | NdType | sn, hname, bname, pname, hsort | 商品定義 |
 | NdReason | sn, id, content, adate, udate | 原因代碼 |
@@ -222,6 +234,7 @@ public class NdReportDetail {
 | SysConfig | sn, id, title, content, mstatus | 系統設定 |
 | Syslog | sn, adminsn, loginid, action, mstatus, fromip, adate + cid, company, alevel, detail, debug | 系統日誌 |
 | RptMailLog | sn, ndsn, adate | 報表郵件紀錄 |
+| EmailFailureLog | sn, recipient, subject, errorMessage, retryCount, resolved, triggeredBySn, adate, resolvedDate | Email 發送失敗紀錄 |
 
 ## 主鍵策略
 
