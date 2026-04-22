@@ -12,6 +12,8 @@ public interface CustomerServiceDataRepository extends JpaRepository<CustomerSer
 
     List<CustomerServiceData> findByNdsnAndCid(Long ndsn, String cid);
 
+    List<CustomerServiceData> findByNdsnAndCidOrderByColumnSnAsc(Long ndsn, String cid);
+
     Optional<CustomerServiceData> findByNdsnAndCidAndColumnSn(Long ndsn, String cid, Long columnSn);
 
     List<CustomerServiceData> findByNdsn(Long ndsn);

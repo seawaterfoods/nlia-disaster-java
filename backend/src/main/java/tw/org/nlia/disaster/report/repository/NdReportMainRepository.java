@@ -14,5 +14,7 @@ public interface NdReportMainRepository extends JpaRepository<NdReportMain, Long
 
     List<NdReportMain> findByNdsn(Long ndsn);
 
+    List<NdReportMain> findByNdsnOrderByCidAsc(Long ndsn);
+
     boolean existsByNdsnAndCid(Long ndsn, String cid);
 }

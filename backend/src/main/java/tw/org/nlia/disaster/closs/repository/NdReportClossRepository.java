@@ -9,6 +9,8 @@ import java.util.List;
 @Repository
 public interface NdReportClossRepository extends JpaRepository<NdReportCloss, Long> {
 
+    List<NdReportCloss> findByNdsnAndCidAndShowStatusOrderBySnAsc(Long ndsn, String cid, String showStatus);
+
     List<NdReportCloss> findByNdsnAndCidAndShowStatusOrderBySnDesc(Long ndsn, String cid, String showStatus);
 
     List<NdReportCloss> findByNdsnAndShowStatus(Long ndsn, String showStatus);

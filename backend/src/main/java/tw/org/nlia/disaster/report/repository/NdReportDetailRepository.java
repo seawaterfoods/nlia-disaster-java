@@ -14,7 +14,15 @@ import java.util.List;
 @Repository
 public interface NdReportDetailRepository extends JpaRepository<NdReportDetail, Long> {
 
+    @Query("SELECT d FROM NdReportDetail d WHERE d.ndsn = :ndsn AND d.cid = :cid AND d.showStatus = :showStatus ORDER BY d.sn ASC")
+    List<NdReportDetail> findByNdsnAndCidAndShowStatusOrderBySnAsc(@Param("ndsn") Long ndsn, @Param("cid") String cid, @Param("showStatus") String showStatus);
+
+    List<NdReportDetail> findByNdsnAndCidAndHnameAndShowStatus(Long ndsn, String cid, String hname, String showStatus);
+
     List<NdReportDetail> findByNdsnAndCidAndShowStatusOrderBySnDesc(Long ndsn, String cid, String showStatus);
+
+    @Query("SELECT COALESCE(SUM(d.preCost), 0) FROM NdReportDetail d WHERE d.ndsn = :ndsn AND d.cid = :cid AND d.showStatus = 'Y'")
+    BigDecimal sumPreCostByNdsnAndCid(@Param("ndsn") Long ndsn, @Param("cid") String cid);
 
     Page<NdReportDetail> findByNdsnAndCidAndShowStatus(Long ndsn, String cid, String showStatus, Pageable pageable);
 
