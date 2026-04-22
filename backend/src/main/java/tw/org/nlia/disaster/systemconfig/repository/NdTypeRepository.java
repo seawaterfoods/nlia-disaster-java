@@ -11,12 +11,16 @@ import java.util.List;
 @Repository
 public interface NdTypeRepository extends JpaRepository<NdType, Long> {
 
+    List<NdType> findAllByOrderByHsortAscSnAsc();
+
     List<NdType> findByHnameOrderByBnameAsc(String hname);
+
+    List<NdType> findByHnameAndBname(String hname, String bname);
 
     List<NdType> findByBnameAndPnameNotOrderByPnameAsc(String bname, String pnameNot);
 
     @Query("SELECT DISTINCT n.bname FROM NdType n WHERE n.hname = :hname ORDER BY n.bname ASC")
-    List<String> findDistinctBnameByHname(@Param("hname") String hname);
+    List<String> findDistinctBnamesByHname(@Param("hname") String hname);
 
     @Query("SELECT DISTINCT n.hname FROM NdType n ORDER BY n.hsort ASC")
     List<String> findDistinctHnames();

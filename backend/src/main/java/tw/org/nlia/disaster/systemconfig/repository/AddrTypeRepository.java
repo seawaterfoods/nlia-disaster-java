@@ -12,6 +12,11 @@ public interface AddrTypeRepository extends JpaRepository<AddrType, String> {
 
     List<AddrType> findByCsnOrderByAsnAsc(String csn);
 
+    List<AddrType> findByCname(String cname);
+
+    @Query("SELECT DISTINCT a.cname FROM AddrType a ORDER BY a.cname ASC")
+    List<String> findDistinctCnames();
+
     @Query("SELECT DISTINCT a.csn FROM AddrType a ORDER BY a.csn ASC")
     List<String> findDistinctCsn();
 

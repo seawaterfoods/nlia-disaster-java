@@ -14,7 +14,11 @@ import java.util.List;
 @Repository
 public interface DisasterRepository extends JpaRepository<Disaster, Long> {
 
+    List<Disaster> findAllByOrderBySnDesc();
+
     Page<Disaster> findAllByOrderBySnDesc(Pageable pageable);
+
+    List<Disaster> findByShowStatusOrderBySnDesc(String showStatus);
 
     @Query("SELECT d FROM Disaster d WHERE d.adate <= :today AND d.vdate >= :today ORDER BY d.sn DESC")
     List<Disaster> findActiveDisasters(@Param("today") LocalDate today);
