@@ -1,0 +1,47 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: nlia-disaster-db
+    environment:
+      MYSQL_DATABASE: nlia_disaster
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-CHANGE_ME}
+      MYSQL_USER: ${DB_USERNAME:-nlia}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-REDACTED_DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: nlia-disaster-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/nlia_disaster?useUnicode=true&characterEncoding=utf8mb4&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Taipei
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-nlia}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-REDACTED_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-REDACTED_JWT_SECRET}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    container_name: nlia-disaster-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  db_data:
