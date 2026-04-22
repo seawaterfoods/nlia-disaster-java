@@ -33,7 +33,7 @@ public class AlertService {
     private final SysConfigRepository sysConfigRepository;
     private final JavaMailSender mailSender;
 
-    @Value("${mail.from.address:REDACTED_MAIL_FROM}")
+    @Value("${mail.from.address:noreply@example.com}")
     private String fromAddress;
 
     @Value("${mail.from.name:重大災損通報系統}")
