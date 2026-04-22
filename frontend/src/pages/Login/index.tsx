@@ -1,71 +1,64 @@
-import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Form, Input, Button, Card, message, notification, Typography } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { authApi } from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
 
+const { Title } = Typography;
+
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
+  const handleSubmit = async (values: { email: string; password: string }) => {
     try {
-      const res = await authApi.login({ email, password });
-      const { accessToken, refreshToken, user } = res.data.data;
+      const res = await authApi.login(values);
+      const { accessToken, refreshToken, user, emailFailureNotifications } = res.data.data;
       login(accessToken, refreshToken, user);
+
+      if (emailFailureNotifications && emailFailureNotifications.length > 0) {
+        emailFailureNotifications.forEach((msg: string) => {
+          notification.warning({ message: '郵件發送失敗通知', description: msg, duration: 8 });
+        });
+      }
+
+      message.success('登入成功');
       navigate('/');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr.response?.data?.message || '登入失敗');
-    } finally {
-      setLoading(false);
+      message.error(axiosErr.response?.data?.message || '登入失敗');
     }
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f5f5f5' }}>
-      <div style={{ background: '#fff', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>重大災害損失預估通報系統</h2>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem' }}>帳號 (Email)</label>
-            <input
-              id="email"
-              type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: '0.5rem', boxSizing: 'border-box' }}
-            />
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label htmlFor="password" style={{ display: 'block', marginBottom: '0.5rem' }}>密碼</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ width: '100%', padding: '0.5rem', boxSizing: 'border-box' }}
-            />
-          </div>
-          {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', padding: '0.75rem', background: '#1976d2', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+    <div className="login-container">
+      <Card style={{ width: 400 }}>
+        <Title level={3} style={{ textAlign: 'center', marginBottom: 32 }}>
+          重大災害損失預估通報系統
+        </Title>
+        <Form form={form} onFinish={handleSubmit} layout="vertical" size="large">
+          <Form.Item
+            name="email"
+            label="帳號 (Email)"
+            rules={[{ required: true, message: '請輸入帳號' }]}
           >
-            {loading ? '登入中...' : '登入'}
-          </button>
-        </form>
-      </div>
+            <Input prefix={<UserOutlined />} placeholder="請輸入 Email" />
+          </Form.Item>
+          <Form.Item
+            name="password"
+            label="密碼"
+            rules={[{ required: true, message: '請輸入密碼' }]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="請輸入密碼" />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              登入
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
 }

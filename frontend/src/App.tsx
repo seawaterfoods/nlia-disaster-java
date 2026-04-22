@@ -1,33 +1,44 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+import zhTW from 'antd/locale/zh_TW';
 import { AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
 import LoginPage from './pages/Login';
 import DashboardPage from './pages/Dashboard';
+import DisasterPage from './pages/Disaster';
+import ReportPage from './pages/Report';
+import AccountPage from './pages/Account';
+import StatisticsPage from './pages/Statistics';
+import SystemConfigPage from './pages/SystemConfig';
+import SyslogPage from './pages/Syslog';
+import './App.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<DashboardPage />} />
-            <Route path="reports" element={<div><h2>災損通報</h2><p>開發中...</p></div>} />
-            <Route path="statistics" element={<div><h2>統計報表</h2><p>開發中...</p></div>} />
-            <Route path="disasters" element={<div><h2>災害管理</h2><p>開發中...</p></div>} />
-            <Route path="accounts" element={<div><h2>帳號管理</h2><p>開發中...</p></div>} />
-            <Route path="config" element={<div><h2>系統設定</h2><p>開發中...</p></div>} />
-            <Route path="syslogs" element={<div><h2>系統日誌</h2><p>開發中...</p></div>} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ConfigProvider locale={zhTW}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<DashboardPage />} />
+              <Route path="reports" element={<ReportPage />} />
+              <Route path="statistics" element={<StatisticsPage />} />
+              <Route path="disasters" element={<DisasterPage />} />
+              <Route path="accounts" element={<AccountPage />} />
+              <Route path="config" element={<SystemConfigPage />} />
+              <Route path="syslogs" element={<SyslogPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ConfigProvider>
   );
 }
 

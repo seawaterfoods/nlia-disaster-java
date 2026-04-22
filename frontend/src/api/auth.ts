@@ -20,6 +20,7 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   user: UserInfo;
+  emailFailureNotifications: string[];
 }
 
 export interface ApiResponse<T> {

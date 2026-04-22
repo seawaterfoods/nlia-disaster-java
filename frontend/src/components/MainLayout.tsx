@@ -1,6 +1,23 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Layout, Menu, Dropdown, Avatar, Space, theme } from 'antd';
+import {
+  HomeOutlined,
+  AlertOutlined,
+  BarChartOutlined,
+  ThunderboltOutlined,
+  TeamOutlined,
+  SettingOutlined,
+  FileTextOutlined,
+  UserOutlined,
+  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+} from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../api/auth';
+
+const { Header, Sider, Content } = Layout;
 
 const LEVEL_LABELS: Record<number, string> = {
   1: '一般使用者',
@@ -13,6 +30,9 @@ const LEVEL_LABELS: Record<number, string> = {
 export default function MainLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const { token: themeToken } = theme.useToken();
 
   const handleLogout = async () => {
     try {
@@ -26,43 +46,92 @@ export default function MainLayout() {
 
   const level = user?.level ?? 0;
 
+  const menuItems = [
+    { key: '/', icon: <HomeOutlined />, label: '公告首頁' },
+    ...(level >= 1 ? [{ key: '/reports', icon: <AlertOutlined />, label: '災損通報' }] : []),
+    ...(level >= 3 ? [{ key: '/statistics', icon: <BarChartOutlined />, label: '統計報表' }] : []),
+    ...(level >= 3 ? [{ key: '/disasters', icon: <ThunderboltOutlined />, label: '災害管理' }] : []),
+    ...(level >= 2 ? [{ key: '/accounts', icon: <TeamOutlined />, label: '帳號管理' }] : []),
+    ...(level >= 4 ? [{ key: '/config', icon: <SettingOutlined />, label: '系統設定' }] : []),
+    ...(level >= 4 ? [{ key: '/syslogs', icon: <FileTextOutlined />, label: '系統日誌' }] : []),
+  ];
+
+  const userMenuItems = [
+    {
+      key: 'info',
+      label: `${user?.name}（${LEVEL_LABELS[level] || ''}）`,
+      disabled: true,
+    },
+    { type: 'divider' as const },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '登出',
+      onClick: handleLogout,
+    },
+  ];
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <nav style={{ width: '220px', background: '#1e3a5f', color: '#fff', padding: '1rem' }}>
-        <h3 style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>重大災損通報系統</h3>
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          <li style={{ marginBottom: '0.5rem' }}><Link to="/" style={linkStyle}>公告首頁</Link></li>
-          {level >= 1 && <li style={{ marginBottom: '0.5rem' }}><Link to="/reports" style={linkStyle}>災損通報</Link></li>}
-          {level >= 3 && <li style={{ marginBottom: '0.5rem' }}><Link to="/statistics" style={linkStyle}>統計報表</Link></li>}
-          {level >= 3 && <li style={{ marginBottom: '0.5rem' }}><Link to="/disasters" style={linkStyle}>災害管理</Link></li>}
-          {level >= 2 && <li style={{ marginBottom: '0.5rem' }}><Link to="/accounts" style={linkStyle}>帳號管理</Link></li>}
-          {level >= 4 && <li style={{ marginBottom: '0.5rem' }}><Link to="/config" style={linkStyle}>系統設定</Link></li>}
-          {level >= 4 && <li style={{ marginBottom: '0.5rem' }}><Link to="/syslogs" style={linkStyle}>系統日誌</Link></li>}
-        </ul>
-      </nav>
-
-      {/* Main content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.5rem', background: '#f8f9fa', borderBottom: '1px solid #dee2e6' }}>
-          <span>{user?.companyName}</span>
-          <div>
-            <span style={{ marginRight: '1rem' }}>{user?.name}（{LEVEL_LABELS[level] || ''}）</span>
-            <button onClick={handleLogout} style={{ padding: '0.25rem 0.75rem', cursor: 'pointer' }}>登出</button>
-          </div>
-        </header>
-
-        {/* Content */}
-        <main style={{ flex: 1, padding: '1.5rem' }}>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        trigger={null}
+        theme="dark"
+        width={220}
+      >
+        <div style={{
+          height: 48,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: collapsed ? 14 : 15,
+          padding: '0 8px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+        }}>
+          {collapsed ? '災損' : '重大災損通報系統'}
+        </div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={({ key }) => navigate(key)}
+        />
+      </Sider>
+      <Layout>
+        <Header style={{
+          padding: '0 24px',
+          background: themeToken.colorBgContainer,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: `1px solid ${themeToken.colorBorderSecondary}`,
+        }}>
+          <span
+            onClick={() => setCollapsed(!collapsed)}
+            style={{ fontSize: 18, cursor: 'pointer' }}
+          >
+            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          </span>
+          <Space>
+            <span>{user?.companyName}</span>
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+              <Space style={{ cursor: 'pointer' }}>
+                <Avatar icon={<UserOutlined />} size="small" />
+                <span>{user?.name}</span>
+              </Space>
+            </Dropdown>
+          </Space>
+        </Header>
+        <Content style={{ margin: 16, padding: 24, background: themeToken.colorBgContainer, borderRadius: themeToken.borderRadiusLG }}>
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </Content>
+      </Layout>
+    </Layout>
   );
 }
-
-const linkStyle: React.CSSProperties = {
-  color: '#ccc',
-  textDecoration: 'none',
-};
